@@ -1,0 +1,139 @@
+go atlas
+
+# Mesh Definition
+mesh space.mult=1.0
+x.mesh loc=0 spac=0.2
+x.mesh loc=2 spac=0.2
+x.mesh loc=5 spac=0.05
+x.mesh loc=8 spac=0.2
+
+y.mesh loc=0.00 spac=0.001
+y.mesh loc=0.02 spac=0.001
+y.mesh loc=0.03 spac=0.001
+y.mesh loc=0.038 spac=0.001
+y.mesh loc=0.05 spac=0.01
+y.mesh loc=0.500 spac=0.01
+
+
+
+region num=1 material=HfO2 x.min=0 x.max=8 y.min=0 y.max=0.030
+region num=2 material=HfO2 x.min=0 x.max=3 y.min=0.030 y.max=0.032
+region num=3 user.material=graphene x.min=3 x.max=5 y.min=0.030 y.max=0.032
+region num=4 material=HfO2 x.min=5 x.max=8 y.min=0.030 y.max=0.032
+region num=5 material=HfO2 x.min=0 x.max=8 y.min=0.032 y.max=0.038
+region num=6 user.material=MoS2 x.min=3 x.max=5 y.min=0.038 y.max=0.042
+#region num=7 material=HfO2 x.min=0 x.max=3 y.min=0.038 y.max=0.040
+#region num=8 material=HfO2 x.min=5 x.max=8 y.min=0.038 y.max=0.040
+region num=7 material=aluminium x.min=0 x.max=3 y.min=0.038 y.max=0.042
+region num=8 material=aluminium x.min=5 x.max=8 y.min=0.038 y.max=0.042
+region num=9 material=SiO2 x.min=0 x.max=8 y.min=0.042 y.max=0.30 
+region num=10 material=Si x.min=0 x.max=8 y.min=0.30 y.max=0.50 substrate 
+
+
+
+elec num=1 name=source x.min=0 x.max=3 y.min=0.038 y.max=0.042
+elec num=2 name=drain x.min=5 x.max=8 y.min=0.038 y.max=0.042
+elec num=3 name=gate x.min=3 x.max=5 y.min=0 y.max=0
+elec num=4 substrate
+
+save outfile=fet_with_electrodes_custom.str
+
+tonyplot fet_with_electrodes_custom.str
+
+go  atlas 
+mesh infile=fet_with_electrodes_custom.str
+
+#doping uniform conc=2e+20 p.type x.left=0 x.right=8 y.top=0.3 y.bottom=0.5 direction=y 
+
+
+doping uniform p.type conc=2e20 reg=10
+
+
+material material=MoS2 user.group=semiconductor user.default=Si eg300=1.89 affinity=4.7 permittivity=5 \
+    NC300=2e19 NV300=2e19 MUN=100 MUP=100 taun0=1e-7 taup0=1e-7
+
+material material=graphene user.group=semiconductor user.default=Ge eg300=0.1 affinity=4.5 permittivity=2 \
+    MUN=100000 MUP=100000
+
+contact name=gate workf=5.3
+contact name=source workf=4.5
+contact name=drain workf=4.5
+
+models print srh cvt boltzman
+mobility albrct.n
+
+output band.temp con.band val.band band.param e.mobility h.mobility u.srh u.radiative u.auger permi flowlines
+
+# Solver Method
+method newton itlimit=40 maxtrap=20
+
+solve init 
+save outf=fet_te.str
+tonyplot fet_te.str
+
+# Boundary Conditions (Optional: Placeholder for explicit boundaries)
+# boundary y.min dirichlet value=0
+# boundary y.max dirichlet value=0
+solve init
+solve vdrain=0.045
+log outf=IDvsVGS-ve.log
+
+solve name=gate vgate=0 vfinal=-2 vstep=-0.5
+log off
+#tonyplot IDvsVGS-ve.log
+
+solve init
+solve vdrain=0.045
+log outf=IDvsVGS+ve.log
+
+
+solve name=gate vgate=0 vfinal=2 vstep=0.5
+log off
+#tonyplot IDvsVGS+ve.log
+
+tonyplot -overlay IDvsVGS-ve.log IDvsVGS+ve.log
+
+solve init
+solve vgate=-6
+log outf=fet-6V.log
+
+solve name=drain vdrain=0 vfinal=0.04 vstep=0.005
+#struct outfile=fet-6V.str
+#tonyplot fet-6V.str
+log off
+#tonyplot fet-6V.log
+
+solve init
+solve vgate=-3
+log outf=fet-3V.log
+
+solve name=drain vdrain=0 vfinal=0.04 vstep=0.005
+#struct outfile=fet-3V.str
+#tonyplot fet-3V.str
+log off
+#tonyplot fet-3V.log
+
+solve init
+solve vgate=0
+log outf=fet0V.log
+
+solve name=drain vdrain=0 vfinal=0.04 vstep=0.005
+#struct outfile=fet0V.str
+#tonyplot fet0V.str
+log off
+#tonyplot fet0V.log
+
+solve init
+solve vgate=2
+log outf=fet2V.log
+
+solve name=drain vdrain=0 vfinal=0.04 vstep=0.005
+#struct outfile=fet2V.str
+#tonyplot fet2V.str
+log off
+#tonyplot fet2V.log
+
+tonyplot -overlay fet-6V.log fet-3V.log fet0V.log fet2V.log
+
+quit
+
